@@ -27,6 +27,14 @@ const run = async () => {
     const properties = db.collection("properties");
     const users = db.collection("user");
 
+    app.get("/api/feature-properties", async (req, res) => {
+      const query = {
+        featured: true,
+      };
+      const result = await properties.find(query).limit(6).toArray();
+      res.send(result);
+    });
+
     await client.db("admin").command({ ping: 1 }); // comment for production
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",

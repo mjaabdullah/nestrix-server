@@ -21,7 +21,7 @@ const client = new MongoClient(uri, {
 
 const run = async () => {
   try {
-    await client.connect(); // comment for production
+    // await client.connect(); // comment for production
 
     const db = client.db("Nestrix");
     const properties = db.collection("properties");
@@ -35,7 +35,30 @@ const run = async () => {
       res.send(result);
     });
 
-    await client.db("admin").command({ ping: 1 }); // comment for production
+    app.get("/api/properties/:id", async (req, res) => {
+      console.log("working");
+      try {
+        const id = req.params.id;
+
+        const result = await properties.findOne({
+          _id: new ObjectId(id),
+        });
+
+        if (!result) {
+          return res.status(404).send({
+            message: "Property not found",
+          });
+        }
+
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({
+          message: "Invalid Property id",
+        });
+      }
+    });
+
+    // await client.db("admin").command({ ping: 1 }); // comment for production
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",
     );

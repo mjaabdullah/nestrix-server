@@ -58,12 +58,70 @@ const run = async () => {
         });
       }
     });
-    app.post("/api/new/review", async (req, res) => {
-      const newReview = req.body;
-      const result = await reviews.insertOne(newReview);
-      res.send(result);
-    });
-    
+   app.post("/api/new/review", async (req, res) => {
+     try {
+       const newReview = req.body;
+
+       // Save Review
+       const result = await reviews.insertOne(newReview);
+
+       // Get All Reviews For This Property
+       const propertyReviews = await reviews
+         .find({
+           propertyId: newReview.propertyId,
+         })
+         .toArray();
+
+       const totalReviews = propertyReviews.length;
+
+       const totalRating = propertyReviews.reduce(
+         (acc, review) => acc + review.rating,
+         0,
+       );
+
+       const averageRating =
+         totalReviews > 0 ? Number((totalRating / totalReviews).toFixed(1)) : 0;
+
+       // Update Property
+       await properties.updateOne(
+         {
+           _id: new ObjectId(newReview.propertyId),
+         },
+         {
+           $set: {
+             averageRating,
+             totalReviews,
+           },
+         },
+       );
+
+       res.send(result);
+     } catch (error) {
+       console.error(error);
+
+       res.status(500).send({
+         success: false,
+         message: "Internal Server Error",
+       });
+     }
+   });
+
+   app.get("/api/reviews/:propertyId", async (req, res) => {
+     const id = req.params.propertyId;
+
+     const result = await reviews
+       .find({
+         propertyId: id,
+       })
+       .toArray();
+     if (!result) {
+       return res.status(404).send({
+         message: "Review not found",
+       });
+     }
+     res.send(result);
+   });
+
     // await client.db("admin").command({ ping: 1 }); // comment for production
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",

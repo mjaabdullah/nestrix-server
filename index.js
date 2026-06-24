@@ -37,16 +37,79 @@ const run = async () => {
     });
 
 
-app.get("/api/properties", async (req, res) => {
-  const query = {
-    featured: true,
-  };
-  const result = await properties.find(query).toArray();
-  res.send(result);
-});
+    app.get("/api/properties", async (req, res) => {
+      try {
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 7;
+
+        const skip = (page - 1) * limit;
+
+        // Query Params
+        const location = req.query.location;
+        const propertyType = req.query.propertyType;
+        const minPrice = Number(req.query.minPrice);
+        const maxPrice = Number(req.query.maxPrice);
+
+        // Base Query
+        const query = {
+          status: "Approved",
+        };
+
+        // Location Filter
+        if (location) {
+          query.location = {
+            $regex: location,
+            $options: "i",
+          };
+        }
+
+        // Property Type Filter
+        if (propertyType) {
+          query.propertyType = propertyType;
+        }
+
+        // Price Filter
+        if (minPrice || maxPrice) {
+          query.rent = {};
+
+          if (minPrice) {
+            query.rent.$gte = minPrice;
+          }
+
+          if (maxPrice) {
+            query.rent.$lte = maxPrice;
+          }
+        }
+
+        // Total Count
+        const total = await properties.countDocuments(query);
+
+        // Data Fetch
+        const result = await properties
+          .find(query)
+          .skip(skip)
+          .limit(limit)
+          .toArray();
+
+        res.send({
+          success: true,
+          data: result,
+          pagination: {
+            currentPage: page,
+            totalPages: Math.ceil(total / limit),
+            totalItems: total,
+            limit,
+          },
+        });
+      } catch (error) {
+        res.status(500).send({
+          success: false,
+          message: error.message,
+        });
+      }
+    });
 
     app.get("/api/properties/:id", async (req, res) => {
-      console.log("working");
       try {
         const id = req.params.id;
 

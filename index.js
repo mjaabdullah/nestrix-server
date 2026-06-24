@@ -26,6 +26,7 @@ const run = async () => {
     const db = client.db("Nestrix");
     const properties = db.collection("properties");
     const users = db.collection("user");
+    const reviews = db.collection("reviews");
 
     app.get("/api/feature-properties", async (req, res) => {
       const query = {
@@ -57,7 +58,12 @@ const run = async () => {
         });
       }
     });
-
+    app.post("/api/new/review", async (req, res) => {
+      const newReview = req.body;
+      const result = await reviews.insertOne(newReview);
+      res.send(result);
+    });
+    
     // await client.db("admin").command({ ping: 1 }); // comment for production
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",

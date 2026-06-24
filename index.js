@@ -36,6 +36,15 @@ const run = async () => {
       res.send(result);
     });
 
+
+app.get("/api/properties", async (req, res) => {
+  const query = {
+    featured: true,
+  };
+  const result = await properties.find(query).toArray();
+  res.send(result);
+});
+
     app.get("/api/properties/:id", async (req, res) => {
       console.log("working");
       try {

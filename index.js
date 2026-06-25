@@ -40,7 +40,8 @@ const run = async () => {
     app.get("/api/properties", async (req, res) => {
       try {
         const page = Number(req.query.page) || 1;
-        const limit = Number(req.query.limit) || 7;
+        const limit = Number(req.query.limit) || 6;
+        console.log(req.query.page, "page");
 
         const skip = (page - 1) * limit;
 

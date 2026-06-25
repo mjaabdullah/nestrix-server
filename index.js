@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
 
 const app = express();
 app.use(cors());
@@ -18,6 +19,39 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+const JWKS = createRemoteJWKSet(
+  new URL(`${process.env.Frontend_URL}/api/auth/jwks`),
+);
+
+const verifyToken = async (req, res, next) => {
+  const header = req?.headers.authorization;
+
+  if (!header) {
+    return res.status(401).send({
+      success: false,
+      message: "Unauthorized",
+    });
+  }
+  const token = header.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).send({
+      success: false,
+      message: "Unauthorized",
+    });
+  }
+
+  try {
+    const { payload } = await jwtVerify(token, JWKS);
+    console.log(payload);
+    next();
+  } catch (error) {
+    return res.status(401).send({
+      message: "Forbidden",
+    });
+  }
+};
 
 const run = async () => {
   try {
@@ -36,12 +70,10 @@ const run = async () => {
       res.send(result);
     });
 
-
     app.get("/api/properties", async (req, res) => {
       try {
         const page = Number(req.query.page) || 1;
         const limit = Number(req.query.limit) || 6;
-        console.log(req.query.page, "page");
 
         const skip = (page - 1) * limit;
 
@@ -110,7 +142,7 @@ const run = async () => {
       }
     });
 
-    app.get("/api/properties/:id", async (req, res) => {
+    app.get("/api/properties/:id", verifyToken, async (req, res) => {
       try {
         const id = req.params.id;
 
@@ -131,69 +163,71 @@ const run = async () => {
         });
       }
     });
-   app.post("/api/new/review", async (req, res) => {
-     try {
-       const newReview = req.body;
+    app.post("/api/new/review", verifyToken, async (req, res) => {
+      try {
+        const newReview = req.body;
 
-       // Save Review
-       const result = await reviews.insertOne(newReview);
+        // Save Review
+        const result = await reviews.insertOne(newReview);
 
-       // Get All Reviews For This Property
-       const propertyReviews = await reviews
-         .find({
-           propertyId: newReview.propertyId,
-         })
-         .toArray();
+        // Get All Reviews For This Property
+        const propertyReviews = await reviews
+          .find({
+            propertyId: newReview.propertyId,
+          })
+          .toArray();
 
-       const totalReviews = propertyReviews.length;
+        const totalReviews = propertyReviews.length;
 
-       const totalRating = propertyReviews.reduce(
-         (acc, review) => acc + review.rating,
-         0,
-       );
+        const totalRating = propertyReviews.reduce(
+          (acc, review) => acc + review.rating,
+          0,
+        );
 
-       const averageRating =
-         totalReviews > 0 ? Number((totalRating / totalReviews).toFixed(1)) : 0;
+        const averageRating =
+          totalReviews > 0
+            ? Number((totalRating / totalReviews).toFixed(1))
+            : 0;
 
-       // Update Property
-       await properties.updateOne(
-         {
-           _id: new ObjectId(newReview.propertyId),
-         },
-         {
-           $set: {
-             averageRating,
-             totalReviews,
-           },
-         },
-       );
+        // Update Property
+        await properties.updateOne(
+          {
+            _id: new ObjectId(newReview.propertyId),
+          },
+          {
+            $set: {
+              averageRating,
+              totalReviews,
+            },
+          },
+        );
 
-       res.send(result);
-     } catch (error) {
-       console.error(error);
+        res.send(result);
+      } catch (error) {
+        console.error(error);
 
-       res.status(500).send({
-         success: false,
-         message: "Internal Server Error",
-       });
-     }
-   });
+        res.status(500).send({
+          success: false,
+          message: "Internal Server Error",
+        });
+      }
+    });
 
-   app.get("/api/reviews/:propertyId", async (req, res) => {
-     const id = req.params.propertyId;
+    app.get("/api/reviews/:propertyId", verifyToken, async (req, res) => {
+      const id = req.params.propertyId;
 
-     const result = await reviews
-       .find({
-         propertyId: id,
-       })
-       .toArray();
-     if (!result) {
-       return res.status(404).send({
-         message: "Review not found",
-       });
-     }
-     res.send(result);
-   });
+      const result = await reviews
+        .find({
+          propertyId: id,
+        })
+        .toArray();
+      if (!result) {
+        return res.status(404).send({
+          message: "Review not found",
+        });
+      }
+      res.send(result);
+    });
 
     // await client.db("admin").command({ ping: 1 }); // comment for production
     console.log(

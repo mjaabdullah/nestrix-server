@@ -61,6 +61,7 @@ const run = async () => {
     const properties = db.collection("properties");
     const users = db.collection("user");
     const reviews = db.collection("reviews");
+    const favorites = db.collection("favorites");
 
     app.get("/api/feature-properties", async (req, res) => {
       const query = {
@@ -70,38 +71,38 @@ const run = async () => {
       res.send(result);
     });
 
-   app.get("/api/persons", verifyToken, async (req, res) => {
-     try {
-       const page = Math.max(1, Number(req.query.page) || 1);
-       const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 5));
-       const skip = (page - 1) * limit;
+    app.get("/api/persons", verifyToken, async (req, res) => {
+      try {
+        const page = Math.max(1, Number(req.query.page) || 1);
+        const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 5));
+        const skip = (page - 1) * limit;
 
-       const total = await users.countDocuments();
+        const total = await users.countDocuments();
 
-       const result = await users
-         .find({})
-         .sort({ createdAt: -1 })
-         .skip(skip)
-         .limit(limit)
-         .toArray();
+        const result = await users
+          .find({})
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .toArray();
 
-       res.status(200).send({
-         success: true,
-         data: result,
-         pagination: {
-           page,
-           limit,
-           total,
-           totalPages: Math.ceil(total / limit),
-         },
-       });
-     } catch (error) {
-       res.status(500).send({
-         success: false,
-         message: error.message,
-       });
-     }
-   });
+        res.status(200).send({
+          success: true,
+          data: result,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+          },
+        });
+      } catch (error) {
+        res.status(500).send({
+          success: false,
+          message: error.message,
+        });
+      }
+    });
     app.get("/api/properties", async (req, res) => {
       try {
         const page = Number(req.query.page) || 1;
@@ -195,6 +196,23 @@ const run = async () => {
         });
       }
     });
+
+    app.post("/api/add-to-favorite", verifyToken, async (req, res) => {
+      const newFavorite = req.body;
+      const isFavorite = await favorites.findOne({
+        userId: newFavorite.userId,
+        propertyId: newFavorite.propertyId,
+      });
+
+      if (isFavorite) {
+        return res.status(400).send({
+          message: "Property already favorited",
+        });
+      }
+      const result = await favorites.insertOne(newFavorite);
+      res.send(result);
+    });
+    
     app.post("/api/new/review", verifyToken, async (req, res) => {
       try {
         const newReview = req.body;

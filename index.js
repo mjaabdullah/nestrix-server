@@ -44,7 +44,7 @@ const verifyToken = async (req, res, next) => {
 
   try {
     const { payload } = await jwtVerify(token, JWKS);
-    console.log(payload);
+
     next();
   } catch (error) {
     return res.status(401).send({
@@ -70,6 +70,38 @@ const run = async () => {
       res.send(result);
     });
 
+   app.get("/api/persons", verifyToken, async (req, res) => {
+     try {
+       const page = Math.max(1, Number(req.query.page) || 1);
+       const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 5));
+       const skip = (page - 1) * limit;
+
+       const total = await users.countDocuments();
+
+       const result = await users
+         .find({})
+         .sort({ createdAt: -1 })
+         .skip(skip)
+         .limit(limit)
+         .toArray();
+
+       res.status(200).send({
+         success: true,
+         data: result,
+         pagination: {
+           page,
+           limit,
+           total,
+           totalPages: Math.ceil(total / limit),
+         },
+       });
+     } catch (error) {
+       res.status(500).send({
+         success: false,
+         message: error.message,
+       });
+     }
+   });
     app.get("/api/properties", async (req, res) => {
       try {
         const page = Number(req.query.page) || 1;

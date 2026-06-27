@@ -241,8 +241,45 @@ const run = async () => {
         });
       }
     });
+app.get("/api/favorites", verifyToken, async (req, res) => {
+  try {
+    const { userId, propertyId } = req.query;
 
+    if (propertyId) {
+      const favorite = await favorites.findOne({
+        userId,
+        propertyId,
+      });
 
+      return res.send({
+        success: true,
+        isFavorite: !!favorite,
+        data: favorite,
+      });
+    }
+    const result = await favorites
+      .find({ userId })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    if (!result) {
+      return res.status(404).send({
+        success: false,
+        message: "Favorite not found",
+      });
+    }
+
+    res.send({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    res.status(500).send({
+      success: false,
+      message: error.message,
+    });
+  }
+});
     app.post("/api/new/review", verifyToken, async (req, res) => {
       try {
         const newReview = req.body;

@@ -199,6 +199,7 @@ const run = async () => {
 
     app.post("/api/add-to-favorite", verifyToken, async (req, res) => {
       const newFavorite = req.body;
+
       const isFavorite = await favorites.findOne({
         userId: newFavorite.userId,
         propertyId: newFavorite.propertyId,
@@ -212,7 +213,36 @@ const run = async () => {
       const result = await favorites.insertOne(newFavorite);
       res.send(result);
     });
-    
+
+    app.delete("/api/remove-from-favorite", verifyToken, async (req, res) => {
+      try {
+        const { userId, propertyId } = req.body;
+
+        const result = await favorites.deleteOne({
+          userId,
+          propertyId,
+        });
+
+        if (result.deletedCount === 0) {
+          return res.status(404).send({
+            success: false,
+            message: "Favorite not found",
+          });
+        }
+
+        res.send({
+          success: true,
+          message: "Favorite removed successfully",
+        });
+      } catch (error) {
+        res.status(500).send({
+          success: false,
+          message: error.message,
+        });
+      }
+    });
+
+
     app.post("/api/new/review", verifyToken, async (req, res) => {
       try {
         const newReview = req.body;

@@ -162,7 +162,10 @@ const run = async () => {
 
         // Property Type Filter
         if (propertyType) {
-          query.propertyType = propertyType;
+          query.propertyType = {
+            $regex: propertyType,
+            $options: "i",
+          };
         }
 
         // Price Filter

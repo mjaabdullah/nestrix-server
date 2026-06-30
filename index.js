@@ -74,7 +74,10 @@ const run = async () => {
     app.get("/api/persons", verifyToken, async (req, res) => {
       try {
         const page = Math.max(1, Number(req.query.page) || 1);
-        const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 5));
+        const limit = Math.min(
+          50,
+          Math.max(1, Number(req.query.limit) || 1000),
+        );
         const skip = (page - 1) * limit;
 
         const total = await users.countDocuments();
@@ -103,6 +106,34 @@ const run = async () => {
         });
       }
     });
+
+    app.patch("/api/person/update", verifyToken, async (req, res) => {
+      const { userId, newRole } = req.body;
+
+      if (newRole === "admin")
+        return res
+          .status(400)
+          .send({ message: "Admin role cannot be changed." });
+
+      const allowedRoles = ["tenant", "owner"];
+
+      if (!allowedRoles.includes(newRole)) {
+        return res.status(400).send({
+          success: false,
+          message: "Invalid role.",
+        });
+      }
+
+      const result = await users.updateOne(
+        { _id: new ObjectId(userId) },
+        { $set: { role: newRole } },
+      );
+      res.send({
+        success: true,
+        message: "User role updated successfully.",
+      });
+    });
+
     app.get("/api/properties", async (req, res) => {
       try {
         const page = Number(req.query.page) || 1;

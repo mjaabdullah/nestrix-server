@@ -210,7 +210,10 @@ const run = async () => {
           message: "Property already favorited",
         });
       }
-      const result = await favorites.insertOne(newFavorite);
+      const result = await favorites.insertOne({
+        ...newFavorite,
+        addedAt: new Date(),
+      });
       res.send(result);
     });
 
@@ -241,45 +244,71 @@ const run = async () => {
         });
       }
     });
-app.get("/api/favorites", verifyToken, async (req, res) => {
-  try {
-    const { userId, propertyId } = req.query;
+    app.get("/api/favorites", verifyToken, async (req, res) => {
+      try {
+        const { userId, propertyId } = req.query;
 
-    if (propertyId) {
-      const favorite = await favorites.findOne({
-        userId,
-        propertyId,
-      });
+        if (propertyId) {
+          const favorite = await favorites.findOne({
+            userId,
+            propertyId,
+          });
 
-      return res.send({
-        success: true,
-        isFavorite: !!favorite,
-        data: favorite,
-      });
-    }
-    const result = await favorites
-      .find({ userId })
-      .sort({ createdAt: -1 })
-      .toArray();
+          return res.send({
+            success: true,
+            isFavorite: !!favorite,
+            data: favorite,
+          });
+        }
+        const result = await favorites
+          .find({ userId })
+          .sort({ createdAt: -1 })
+          .toArray();
 
-    if (!result) {
-      return res.status(404).send({
-        success: false,
-        message: "Favorite not found",
-      });
-    }
+        if (!result) {
+          return res.status(404).send({
+            success: false,
+            message: "Favorite not found",
+          });
+        }
 
-    res.send({
-      success: true,
-      data: result,
+        res.send({
+          success: true,
+          data: result,
+        });
+      } catch (error) {
+        res.status(500).send({
+          success: false,
+          message: error.message,
+        });
+      }
     });
-  } catch (error) {
-    res.status(500).send({
-      success: false,
-      message: error.message,
+
+    app.get("/api/favorites-by-user", verifyToken, async (req, res) => {
+      const { userId } = req.query;
+
+      const favoriteList = await favorites.find({ userId }).toArray();
+      const allProperties = await properties.find({}).toArray();
+
+      const result = favoriteList.map((favorite) => {
+        const property = allProperties.find(
+          (item) => item._id.toString() === favorite.propertyId,
+        );
+
+        return {
+          _id: favorite._id,
+          propertyId: favorite.propertyId,
+          propertyTitle: property?.title || "",
+          location: property?.location || "",
+          price: property?.rent || 0,
+          priceType: property?.rentType || "Hourly",
+          image: property?.images?.[0] || "",
+          addedAt: favorite.addedAt,
+        };
+      });
+
+      res.send(result);
     });
-  }
-});
     app.post("/api/new/review", verifyToken, async (req, res) => {
       try {
         const newReview = req.body;

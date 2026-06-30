@@ -209,6 +209,17 @@ const run = async () => {
       }
     });
 
+
+    app.get("/api/properties/types", async (req, res) => {
+      const result = await properties.find().toArray();
+
+      const propertyTypes = [
+        ...new Set(result.map((property) => property.propertyType)),
+      ];
+
+      res.send(propertyTypes);
+    });
+
     app.get("/api/properties/:id", verifyToken, async (req, res) => {
       try {
         const id = req.params.id;

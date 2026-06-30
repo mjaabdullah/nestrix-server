@@ -406,6 +406,25 @@ const run = async () => {
       res.send(result);
     });
 
+
+    app.get("/api/top-reviews", async (req, res) => {
+      const result = await reviews
+        .find({
+          rating: { $gt: 4 },
+        })
+        .sort({ rating: -1 })
+        .limit(4)
+        .toArray();
+
+      if (result.length === 0) {
+        return res.status(404).send({
+          message: "Review not found",
+        });
+      }
+
+      res.send(result);
+    });
+
     // await client.db("admin").command({ ping: 1 }); // comment for production
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",

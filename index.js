@@ -62,6 +62,7 @@ const run = async () => {
     const users = db.collection("user");
     const reviews = db.collection("reviews");
     const favorites = db.collection("favorites");
+    const bookings = db.collection("bookings");
 
     app.get("/api/feature-properties", async (req, res) => {
       const query = {
@@ -208,7 +209,6 @@ const run = async () => {
         });
       }
     });
-
 
     app.get("/api/properties/types", async (req, res) => {
       const result = await properties.find().toArray();
@@ -420,7 +420,6 @@ const run = async () => {
       res.send(result);
     });
 
-
     app.get("/api/top-reviews", async (req, res) => {
       const result = await reviews
         .find({
@@ -435,6 +434,31 @@ const run = async () => {
           message: "Review not found",
         });
       }
+
+      res.send(result);
+    });
+
+    app.post("/api/internal/create-booking", async (req, res) => {
+      const internalSecret = req.headers["x-internal-secret"];
+
+      if (internalSecret !== process.env.INTERNAL_WEBHOOK_SECRET) {
+        return res.status(401).send({ message: "Unauthorized" });
+      }
+
+      const newBooking = req.body;
+
+      const alreadyBooked = await bookings.findOne({
+        stripeSessionId: newBooking.stripeSessionId,
+      });
+
+      if (alreadyBooked) {
+        return res.status(200).send({ message: "Already booked, skipped." });
+      }
+
+      const result = await bookings.insertOne({
+        ...newBooking,
+        bookedAt: new Date(),
+      });
 
       res.send(result);
     });

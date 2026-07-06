@@ -463,6 +463,70 @@ const run = async () => {
       res.send(result);
     });
 
+   app.get("/api/my/bookings/:userId", verifyToken, async (req, res) => {
+     const { userId } = req.params;
+
+     const page = parseInt(req.query.page) || 1;
+     const limit = 5;
+     const skip = (page - 1) * limit;
+
+     const propertiesList = await properties.find({}).toArray();
+
+     // total count (for pagination info)
+     const total = await bookings.countDocuments({ userId });
+
+     const bookingsData = await bookings
+       .find({ userId })
+       .sort({ bookedAt: -1 })
+       .skip(skip)
+       .limit(limit)
+       .toArray();
+
+     if (!bookingsData || bookingsData.length === 0) {
+       return res.status(404).send({
+         message: "Booking not found",
+       });
+     }
+
+     const result = bookingsData.map((booking) => {
+       const property = propertiesList.find(
+         (p) => p._id.toString() === booking.propertyId,
+       );
+
+       return {
+         _id: booking._id,
+         stripeSessionId: booking.stripeSessionId,
+         property: property
+           ? {
+               title: property.title,
+               location: property.location,
+               type: property.propertyType,
+               image:
+                 property.images && property.images.length > 0
+                   ? property.images[0]
+                   : null,
+             }
+           : null,
+         userId: booking.userId,
+         moveInDate: booking.moveInDate,
+         contactNumber: booking.contactNumber,
+         customerEmail: booking.customerEmail,
+         notes: booking.notes,
+         amountPaid: booking.amountPaid,
+         paymentStatus: booking.paymentStatus,
+         bookingStatus: booking.bookingStatus,
+         bookedAt: booking.bookedAt,
+       };
+     });
+
+     res.send({
+       currentPage: page,
+       totalPages: Math.ceil(total / limit),
+       totalBookings: total,
+       data: result,
+     });
+   });
+
     // await client.db("admin").command({ ping: 1 }); // comment for production
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",

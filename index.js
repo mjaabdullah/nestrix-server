@@ -444,12 +444,12 @@ const run = async () => {
       if (internalSecret !== process.env.INTERNAL_WEBHOOK_SECRET) {
         return res.status(401).send({ message: "Unauthorized" });
       }
-
-      const newBooking = req.body;
+      const newBooking = await req.body;
 
       const alreadyBooked = await bookings.findOne({
         stripeSessionId: newBooking.stripeSessionId,
       });
+      
 
       if (alreadyBooked) {
         return res.status(200).send({ message: "Already booked, skipped." });

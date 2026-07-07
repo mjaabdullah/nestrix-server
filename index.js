@@ -467,7 +467,7 @@ const run = async () => {
      const { userId } = req.params;
 
      const page = parseInt(req.query.page) || 1;
-     const limit = 5;
+     const limit = 4;
      const skip = (page - 1) * limit;
 
      const propertiesList = await properties.find({}).toArray();
@@ -485,6 +485,10 @@ const run = async () => {
      if (!bookingsData || bookingsData.length === 0) {
        return res.status(404).send({
          message: "Booking not found",
+         data: [],
+         totalBookings: 0,
+         totalPages: 0,
+         currentPage: page,
        });
      }
 
@@ -514,7 +518,7 @@ const run = async () => {
          notes: booking.notes,
          amountPaid: booking.amountPaid,
          paymentStatus: booking.paymentStatus,
-         bookingStatus: booking.bookingStatus,
+         bookingStatus: booking.bookingStatus || "Pending",
          bookedAt: booking.bookedAt,
        };
      });

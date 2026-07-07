@@ -503,6 +503,7 @@ const run = async () => {
          property: property
            ? {
                title: property.title,
+               propertyId: property._id.toString(),
                location: property.location,
                type: property.propertyType,
                image:
